@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Card Day Ledger</title>
+<style>
+:root{
+  --ink:#1D2646; --ink-soft:#4A5178; --paper:#FAF7F0; --paper-dim:#EFEAE0;
+  --gold:#E4A83C; --gold-dim:#F3D999; --sell:#2F9E5B; --sell-dim:#DCF0E4;
+  --buy:#E2574C; --buy-dim:#FBE0DD; --trade:#3B82C4; --trade-dim:#DEEBF7; --line:#DCD5C4;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --ink:#F4F1E8; --ink-soft:#B9BEDD; --paper:#20243A; --paper-dim:#282C46; --line:#3A3F5C;
+    --sell-dim:#173626; --buy-dim:#3A2321; --trade-dim:#1C2E42; }
+}
+*{box-sizing:border-box;} html,body{height:100%;}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+header{position:sticky; top:0; z-index:20; padding:calc(14px + env(safe-area-inset-top,0px)) 18px 0; background:var(--ink); color:var(--paper);}
+header h1{margin:0; font-size:20px; font-weight:700;}
+.banner{font-size:12px; padding:6px 10px; border-radius:8px; margin-top:8px; display:inline-block;}
+.banner.online{background:rgba(47,158,91,0.25); color:#B9F0CE;}
+.banner.offline{background:rgba(226,87,76,0.25); color:#FBD3CE;}
+.userbar{display:flex; justify-content:space-between; align-items:center; padding:8px 0 0; font-size:12px; opacity:0.8;}
+.userbar button{background:none; border:none; color:var(--gold); font-size:12px; cursor:pointer;}
+nav{display:flex; gap:8px; padding:12px 18px 0;}
+nav button{flex:1; padding:10px 0; border:none; border-radius:10px; background:transparent; color:var(--paper); opacity:0.6; font-size:14px; font-weight:600; cursor:pointer;}
+nav button.active{background:rgba(255,255,255,0.15); opacity:1;}
+main{padding:16px 16px 40px; max-width:640px; margin:0 auto;}
+.card{background:var(--paper-dim); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px;}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+.opt{padding:16px 6px; border-radius:14px; border:2px solid var(--line); background:var(--paper); font-size:16px; font-weight:700; cursor:pointer; color:var(--ink-soft);}
+.opt.sel-sell.chosen{border-color:var(--sell); background:var(--sell-dim); color:var(--sell);}
+.opt.sel-buy.chosen{border-color:var(--buy); background:var(--buy-dim); color:var(--buy);}
+.opt.sel-trade.chosen{border-color:var(--trade); background:var(--trade-dim); color:var(--trade);}
+.opt.pay.chosen{border-color:var(--gold); background:var(--gold-dim); color:var(--ink);}
+label.field{display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin:16px 0 6px;}
+input[type=number],input[type=text],input[type=email],input[type=password],input[type=month]{width:100%; padding:14px; border-radius:12px; border:1px solid var(--line); background:var(--paper); color:var(--ink); font-size:17px;}
+.photo-row{display:flex; gap:10px; align-items:center; margin-top:10px;}
+.photo-btn{padding:12px 16px; border-radius:12px; border:1px dashed var(--line); background:var(--paper); color:var(--ink-soft); font-size:14px; cursor:pointer;}
+.thumb{width:52px; height:52px; border-radius:10px; object-fit:cover; border:1px solid var(--line);}
+.save-btn{width:100%; margin-top:18px; padding:16px; border:none; border-radius:14px; background:var(--gold); color:var(--ink); font-size:17px; font-weight:700; cursor:pointer;}
+.save-btn:disabled{opacity:0.5;}
+.totals{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;}
+.tbox{background:var(--paper-dim); border:1px solid var(--line); border-radius:14px; padding:14px;}
+.tbox .lbl{font-size:12px; color:var(--ink-soft); font-weight:600;}
+.tbox .val{font-size:22px; font-weight:800; margin-top:2px;}
+.grandbox{grid-column:1/-1; background:var(--ink); color:var(--paper); border:none;}
+.grandbox .lbl{color:var(--gold-dim);}
+.datepick{display:flex; gap:10px; margin-bottom:14px;}
+.datepick select,.datepick input{flex:1; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--paper); color:var(--ink); font-size:15px;}
+.txn{display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid var(--line);}
+.txn:last-child{border-bottom:none;}
+.badge{padding:5px 9px; border-radius:8px; font-size:12px; font-weight:700;}
+.badge.sell{background:var(--sell-dim); color:var(--sell);}
+.badge.buy{background:var(--buy-dim); color:var(--buy);}
+.badge.trade{background:var(--trade-dim); color:var(--trade);}
+.txn .mid{flex:1; min-width:0;}
+.txn .mid .note{font-size:14px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.txn .amt{font-weight:700; font-size:15px;}
+.txn .pending{font-size:11px; color:var(--gold);}
+.del{border:none; background:none; color:var(--buy); font-size:13px; padding:6px; cursor:pointer;}
+.empty{text-align:center; padding:40px 10px; color:var(--ink-soft); font-size:14px;}
+.modal{position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:50; display:flex; align-items:center; justify-content:center; padding:20px;}
+.modal img{max-width:100%; max-height:100%; border-radius:12px;}
+.hidden{display:none !important;}
+.subtle{font-size:12px; color:var(--ink-soft); margin-top:-4px; margin-bottom:10px;}
+.dayrow{display:flex; justify-content:space-between; align-items:center; padding:13px 4px; border-bottom:1px solid var(--line); cursor:pointer;}
+.dayrow:last-child{border-bottom:none;}
+.authwrap{max-width:360px; margin:60px auto; padding:0 20px;}
+.authwrap h1{text-align:center; font-size:22px;}
+.authtabs{display:flex; gap:8px; margin-bottom:16px;}
+.authtabs button{flex:1; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--paper-dim); cursor:pointer; font-weight:600; color:var(--ink-soft);}
+.authtabs button.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+.autherr{color:var(--buy); font-size:13px; margin-top:8px; min-height:18px;}
+</style>
+</head>
+<body>
+
+<div id="authScreen" class="authwrap">
+  <h1>🃏 Card Day Ledger</h1>
+  <div class="authtabs">
+    <button id="tabLoginBtn" class="active">Log in</button>
+    <button id="tabSignupBtn">Sign up</button>
+  </div>
+  <label class="field" style="margin-top:0">Email</label>
+  <input type="email" id="authEmail" placeholder="you@example.com">
+  <label class="field">Password</label>
+  <input type="password" id="authPassword" placeholder="At least 6 characters">
+  <button class="save-btn" id="authSubmit">Log in</button>
+  <div class="autherr" id="authError"></div>
+</div>
+
+<div id="app" class="hidden">
+<header>
+  <h1>🃏 Card Day Ledger</h1>
+  <div id="banner" class="banner">Checking connection…</div>
+  <div class="userbar"><span id="userEmail"></span><button id="logoutBtn">Log out</button></div>
+  <nav>
+    <button id="tabLog" class="active">Log</button>
+    <button id="tabDay">Day</button>
+    <button id="tabMonth">Month</button>
+  </nav>
+</header>
+<main>
+  <div id="viewLog">
+    <div class="card">
+      <label class="field" style="margin-top:0">Type</label>
+      <div class="grid3">
+        <button class="opt sel-sell" data-type="sell">Sell</button>
+        <button class="opt sel-buy" data-type="buy">Buy</button>
+        <button class="opt sel-trade" data-type="trade">Trade</button>
+      </div>
+      <div id="payWrap">
+        <label class="field">Payment</label>
+        <div class="grid3">
+          <button class="opt pay" data-pay="cash">Cash</button>
+          <button class="opt pay" data-pay="bank">Bank</button>
+          <button class="opt pay" data-pay="tng">TNG</button>
+        </div>
+      </div>
+      <div id="amountWrap">
+        <label class="field">Amount (RM)</label>
+        <input type="number" id="amountInput" inputmode="decimal" placeholder="0.00" step="0.01">
+      </div>
+      <label class="field">Note (card name, buyer, etc.)</label>
+      <input type="text" id="noteInput" placeholder="e.g. Charizard ex, from Ali">
+      <div class="photo-row">
+        <label class="photo-btn" for="photoInput">📷 Add photo</label>
+        <input type="file" id="photoInput" accept="image/*" capture="environment" class="hidden">
+        <img id="photoPreview" class="thumb hidden">
+        <button id="photoClear" class="del hidden">remove</button>
+      </div>
+      <button class="save-btn" id="saveBtn">Save transaction</button>
+    </div>
+  </div>
+
+  <div id="viewDay" class="hidden">
+    <div class="datepick"><select id="dateSelect"></select></div>
+    <div class="totals">
+      <div class="tbox"><div class="lbl">Cash net</div><div class="val" id="totCash">RM 0.00</div></div>
+      <div class="tbox"><div class="lbl">Bank net</div><div class="val" id="totBank">RM 0.00</div></div>
+      <div class="tbox"><div class="lbl">TNG net</div><div class="val" id="totTng">RM 0.00</div></div>
+      <div class="tbox"><div class="lbl">Trades</div><div class="val" id="totTrade">0</div></div>
+      <div class="tbox grandbox"><div class="lbl">Grand total (net)</div><div class="val" id="totGrand">RM 0.00</div></div>
+    </div>
+    <div class="subtle">Net = money in from sells minus money out for buys, per payment method.</div>
+    <div class="card" style="padding:0;">
+      <div id="txnList"></div>
+      <div id="emptyMsg" class="empty hidden">No transactions logged for this day yet.</div>
+    </div>
+  </div>
+
+  <div id="viewMonth" class="hidden">
+    <div class="datepick"><input type="month" id="monthSelect"></div>
+    <div class="totals">
+      <div class="tbox"><div class="lbl">Total sold (revenue)</div><div class="val" id="mSell">RM 0.00</div></div>
+      <div class="tbox"><div class="lbl">Total bought</div><div class="val" id="mBuy">RM 0.00</div></div>
+      <div class="tbox"><div class="lbl">Trades</div><div class="val" id="mTrade">0</div></div>
+      <div class="tbox grandbox"><div class="lbl">Net profit this month</div><div class="val" id="mNet">RM 0.00</div></div>
+    </div>
+    <div class="card" style="padding:0 4px;">
+      <div id="dayRows"></div>
+      <div id="mEmpty" class="empty hidden">No transactions logged this month yet.</div>
+    </div>
+  </div>
+</main>
+</div>
+
+<div id="photoModal" class="modal hidden"><img id="photoModalImg" src=""></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
